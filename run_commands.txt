@@ -1,0 +1,11 @@
+// Running Server.......
+gcc a7.c -o server                          // compile
+
+./server -s 127.0.0.1 6000 3 input.txt      // run
+
+
+// Running client.......
+
+gcc a7.c -o client          // compile
+
+./client -c 127.0.0.1 6000 3     // run
