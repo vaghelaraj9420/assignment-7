@@ -17,7 +17,7 @@ struct matrix
     int matrix_num;             // Matrix number
     int matrix_row, matrix_col; // Num of rows, cols in a matrix
 
-    int *arr[MAXROW]; // using an array of pointers to create a dynamic array in
+    int *arr[MAXROW]; // using an array of pointers to create a dynamic matrix in
                       // heap
 };
 
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
             m[i].arr[j] = (int *)malloc(
                 col * sizeof(int)); // Initializing the dynamic array of pointers
 
-        for (a = 0; a < row; a++)
+        for (a = 0; a < row; a++)           // reading each matrices which we have just created dynamically
         {
             fgets(line, 100, file);
             token = strtok(line, " ");
@@ -266,9 +266,7 @@ int main(int argc, char *argv[])
                     atoi(token); // storing each matrix element in its position
 
                 printf("%d ", m[i].arr[a][b]);
-                token = strtok(
-                    NULL,
-                    " "); // Moving on to next value in the same row of an input matrix
+                token = strtok(NULL," "); // Moving on to next value in the same row of an input matrix
             }
             printf("\n");
         }
@@ -299,6 +297,7 @@ int main(int argc, char *argv[])
         struct sockaddr_in cli_addr, serv_addr;
         int i;
         char buf[100], temp[50]; /* We will use this buffer for communication */
+        
 
         if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) // Openeing a socket
         {
@@ -333,8 +332,12 @@ int main(int argc, char *argv[])
         int batchSize =
             ceil(num_matrix / num_clients); // calculating the input batch size for each client to be given
         batch_size_global = batchSize;
+
+        char client_result_buf[num_clients][100];           // a 2d array of strings to store the result matrices sent by each client
         int flag = 0, j, x, k, z = 0;
 
+        struct matrix client_result[num_clients];
+        
         // for(i=0, j=0; i<num_matrix, j<num_clients ; i += batchSize, j++)
         // {
         // flag++;
@@ -427,13 +430,21 @@ int main(int argc, char *argv[])
                         }
                     }
 
-                    send(newsockfd, buf, 100, 0); /* Send message */
+                    send(newsockfd, buf, 100, 0); /* Send message */ 
 
                     for (i = 0; i < 100; i++)
                         buf[i] = '\0'; /* Initialize buffer */
 
-                    recv(newsockfd, buf, 100, 0); /* Receive message */
+
+                    recv(newsockfd, buf, 100, 0); /* Receive message */// EDIT....EDIT........EDIT..........
                     printf("%s\n", buf);
+                    // Storing each client's msg into a struct matrix object
+                    i = 0;
+                    static int client_index = 0;
+                    strcpy(client_result_buf[client_index], buf);
+                    printf("\n output of a client stored: \n%s\n", client_result_buf[client_index]);
+                    client_index++;
+
                     close(newsockfd);
                     exit(0);
                 }
@@ -599,11 +610,33 @@ int main(int argc, char *argv[])
             // THREADS
             // END......................................................................
 
+
+
+
+            // HERE MULTIPLY RESULTCHILD[0] TILL RESULTCHILD[2] AND SEND THE FINAL
+            // RESULT MATRIX TO SERVER 
+            // START...................................................................
+            struct matrix result;
+             if (flag == 0)              // multiplying those batches whose num of matrices = batchSize
+            {
+                 result = unbatchify(resultChild, batchSize);
+            }
+            else{                            // multiplying those batches whose num of matrices < batchSize  
+                 result = unbatchify(resultChild, flag);
+            }
+
+             printf("\n----------------------------------------------\n");
+            displayMatrix(result);
+            // END......................................................................
+
             for (i = 0; i < 100; i++)
                 buf[i] = '\0';
             char temp[50];
 
+
+            
             // strcpy(buf, "Message from client");
+            // Printing the batch of matrices which got multiplied, back to the server............................
             if (flag == 0)
             {
                 for (y = 0; y < batchSize; y++)
@@ -624,7 +657,7 @@ int main(int argc, char *argv[])
                     }
                 }
             }
-            else
+            else    // Printing the batch of matrices which got multiplied, back to the server............................
             {
                 for (y = 0; y < flag; y++)
                 {
@@ -644,6 +677,23 @@ int main(int argc, char *argv[])
                     }
                 }
             }
+
+            // Printing the result matrix back to the server............................
+            sprintf(temp, " %d %d ", result.matrix_row,
+                            result.matrix_col);
+            strcat(buf, temp); // the result matrix number, row and col are being stored
+                                       // in the buf
+
+            for (a = 0; a < result.matrix_row; a++)
+            {
+                for (b = 0; b < result.matrix_col; b++)
+                {
+                    sprintf(temp, " %d", result.arr[a][b]);
+                    strcat(buf, temp); // the result matrix elements are being stored in the buf
+                }
+            }
+
+            //......................................................................
 
             send(sockfd, buf, 100, 0);
 
